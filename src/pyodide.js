@@ -3,11 +3,17 @@
  */
 
 var languagePluginLoader = new Promise((resolve, reject) => {
+  
+  if (typeof self === 'undefined'){
+    var self = typeof globalThis !== 'undefined'? globalThis : 
+      (typeof window !== 'undefined'? window : global);
+  };
+
+
   // This is filled in by the Makefile to be either a local file or the
   // deployed location. TODO: This should be done in a less hacky
   // way.
-  var baseURL = self.languagePluginUrl || '{{DEPLOY}}';
-  baseURL = baseURL.substr(0, baseURL.lastIndexOf('/')) + '/';
+  var baseURL = './';
 
   ////////////////////////////////////////////////////////////
   // Package loading
@@ -77,7 +83,10 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // clang-format on
 
   function loadScript(url, onload, onerror) {
-    if (self.document) { // browser
+    if (typeof require !== 'undefined'){
+      require(url);
+      onload();
+    }else if (self.document) { // browser
       const script = self.document.createElement('script');
       script.src = url;
       script.onload = (e) => { onload(); };
@@ -419,47 +428,5 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     }, () => {});
   }, () => {});
 
-  ////////////////////////////////////////////////////////////
-  // Iodide-specific functionality, that doesn't make sense
-  // if not using with Iodide.
-  if (self.iodide !== undefined) {
-    // Load the custom CSS for Pyodide
-    let link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = `${baseURL}renderedhtml.css`;
-    document.getElementsByTagName('head')[0].appendChild(link);
-
-    // Add a custom output handler for Python objects
-    self.iodide.addOutputRenderer({
-      shouldRender : (val) => {
-        return (typeof val === 'function' &&
-                pyodide._module.PyProxy.isPyProxy(val));
-      },
-
-      render : (val) => {
-        let div = document.createElement('div');
-        div.className = 'rendered_html';
-        var element;
-        if (val._repr_html_ !== undefined) {
-          let result = val._repr_html_();
-          if (typeof result === 'string') {
-            div.appendChild(new DOMParser()
-                                .parseFromString(result, 'text/html')
-                                .body.firstChild);
-            element = div;
-          } else {
-            element = result;
-          }
-        } else {
-          let pre = document.createElement('pre');
-          pre.textContent = val.toString();
-          div.appendChild(pre);
-          element = div;
-        }
-        return element.outerHTML;
-      }
-    });
-  }
 });
 languagePluginLoader
