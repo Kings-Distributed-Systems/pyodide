@@ -40,6 +40,7 @@ LDFLAGS=\
 	-s EXPORT_ALL=1 \
 	-s EXPORTED_FUNCTIONS='["___cxa_guard_acquire", "__ZNSt3__28ios_base4initEPv"]' \
 	-s WASM=1 \
+	-s SINGLE_FILE=1 \
 	-s SWAPPABLE_ASM_MODULE=1 \
 	-s USE_FREETYPE=1 \
 	-s USE_LIBPNG=1 \
@@ -99,9 +100,8 @@ env:
 build/pyodide.asm.data: root/.built
 	( \
 		cd build; \
-		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
-	)
-	uglifyjs build/pyodide.asm.data.js -o build/pyodide.asm.data.js
+		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --embed ../root/lib@lib --js-output=pyodide.asm.data.js \
+	)	
 
 
 build/pyodide_dev.js: src/pyodide.js
@@ -176,16 +176,15 @@ clean-all: clean
 	$(CC) -o $@ -c $< $(CFLAGS) -Isrc/type_conversion/
 
 
-build/test.data: $(CPYTHONLIB)
+build/test.js: $(CPYTHONLIB)
 	( \
 		cd $(CPYTHONLIB)/test; \
 		find . -type d -name __pycache__ -prune -exec rm -rf {} \; \
 	)
 	( \
 		cd build; \
-		python $(FILEPACKAGER) test.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../$(CPYTHONLIB)/test@/lib/python3.8/test --js-output=test.js --export-name=pyodide._module --exclude __pycache__ \
+		python $(FILEPACKAGER) test.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --embed ../$(CPYTHONLIB)/test@/lib/python3.8/test --js-output=test.js --export-name=pyodide._module --exclude __pycache__ \
 	)
-	uglifyjs build/test.js -o build/test.js
 
 
 root/.built: \

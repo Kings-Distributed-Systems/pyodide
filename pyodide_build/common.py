@@ -20,6 +20,8 @@ DEFAULTLDFLAGS = " ".join(
         "SIDE_MODULE=1",
         "-s",
         "WASM=1",
+        "-s",
+        "SINGLE_FILE=1",
         "--memory-init-file",
         "0",
     ]
