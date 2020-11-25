@@ -66,12 +66,12 @@ SITEPACKAGES=root/lib/python$(PYMINOR)/site-packages
 
 all: check \
 	build/pyodide.asm.js \
-	build/pyodide.asm.data \
+	build/pyodide.asm.data.js \
 	build/pyodide.js \
 	build/pyodide_dev.js \
 	build/console.html \
 	build/renderedhtml.css \
-	build/test.data \
+	build/test.js \
 	build/packages.json \
 	build/test.html \
 	build/webworker.js \
