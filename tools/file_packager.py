@@ -228,7 +228,9 @@ ret = ''
 # standalone calls
 if not from_emcc:
   ret = '''
-var Module = typeof %(EXPORT_NAME)s !== 'undefined' ? %(EXPORT_NAME)s : {};
+
+var globalObj = typeof self!=='undefined'? self :  ( typeof window !== 'undefined'? window : (typeof global !=='undefined'? global: globalThis ));
+var Module = typeof globalObj.%(EXPORT_NAME)s !== 'undefined' ? globalObj.%(EXPORT_NAME)s : {};
 ''' % {"EXPORT_NAME": export_name}
 
 ret += '''

@@ -41,6 +41,7 @@ LDFLAGS=\
 	-s EXPORTED_FUNCTIONS='["___cxa_guard_acquire", "__ZNSt3__28ios_base4initEPv"]' \
 	-s WASM=1 \
 	-s SINGLE_FILE=1 \
+	-s ASSERTIONS=1 \
 	-s SWAPPABLE_ASM_MODULE=1 \
 	-s USE_FREETYPE=1 \
 	-s USE_LIBPNG=1 \
@@ -87,9 +88,8 @@ build/pyodide.asm.js: src/main.bc src/type_conversion/jsimport.bc \
 		src/type_conversion/runpython.bc src/type_conversion/hiwire.bc
 	date +"[%F %T] Building pyodide.asm.js..."
 	[ -d build ] || mkdir build
-	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.html $(filter %.bc,$^) \
+	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.js $(filter %.bc,$^) \
 		$(LDFLAGS) -s FORCE_FILESYSTEM=1
-	rm build/pyodide.asm.html
 	date +"[%F %T] done building pyodide.asm.js."
 
 

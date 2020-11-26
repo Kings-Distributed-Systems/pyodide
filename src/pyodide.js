@@ -201,7 +201,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
             self.pyodide.loadedPackages[pkg] = toLoad[pkg];
           }
           delete self.pyodide._module.monitorRunDependencies;
-          self.removeEventListener('error', windowErrorHandler);
+          //self.removeEventListener('error', windowErrorHandler);
 
           let resolveMsg = `Loaded `;
           if (packageList.length > 0) {
@@ -221,17 +221,6 @@ var languagePluginLoader = new Promise((resolve, reject) => {
           }
         }
       };
-
-      // Add a handler for any exceptions that are thrown in the process of
-      // loading a package
-      var windowErrorHandler = (err) => {
-        delete self.pyodide._module.monitorRunDependencies;
-        self.removeEventListener('error', windowErrorHandler);
-        // Set up a new Promise chain, since this one failed
-        loadPackagePromise = new Promise((resolve) => resolve());
-        reject(err.message);
-      };
-      self.addEventListener('error', windowErrorHandler);
 
       for (let pkg in toLoad) {
         let scriptSrc;
@@ -330,7 +319,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
 
   ////////////////////////////////////////////////////////////
   // Loading Pyodide
-  let wasmURL = `${baseURL}pyodide.asm.wasm`;
+//  let wasmURL = `${baseURL}pyodide.asm.wasm`;
   let Module = {};
   self.Module = Module;
 
@@ -338,31 +327,31 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   Module.noAudioDecoding = true;
   Module.noWasmDecoding = true;
   Module.preloadedWasm = {};
-  let isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+  let isFirefox = false;//navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
 
-  let wasm_promise, wasm_fetch = fetch(wasmURL);
-  const compileBuffer = () =>
-      wasm_fetch.then(response => response.arrayBuffer())
-          .then(bytes => WebAssembly.compile(bytes));
-  if (WebAssembly.compileStreaming === undefined) {
-    wasm_promise = compileBuffer();
-  } else {
-    wasm_promise = WebAssembly.compileStreaming(wasm_fetch);
-    wasm_promise = wasm_promise.catch(e => {
-      if (e instanceof TypeError) {
-        console.error("pyodide streaming compilation failed:", e,
-                      "- falling back to buffered compilation");
-        return compileBuffer()
-      }
-      throw e;
-    });
-  }
+//  let wasm_promise, wasm_fetch = fetch(wasmURL);
+//  const compileBuffer = () =>
+//      wasm_fetch.then(response => response.arrayBuffer())
+//          .then(bytes => WebAssembly.compile(bytes));
+//  if (WebAssembly.compileStreaming === undefined) {
+//    wasm_promise = compileBuffer();
+//  } else {
+//    wasm_promise = WebAssembly.compileStreaming(wasm_fetch);
+//    wasm_promise = wasm_promise.catch(e => {
+//      if (e instanceof TypeError) {
+//        console.error("pyodide streaming compilation failed:", e,
+//                      "- falling back to buffered compilation");
+//        return compileBuffer()
+//      }
+//      throw e;
+//    });
+//  }
 
-  Module.instantiateWasm = (info, receiveInstance) => {
-    wasm_promise.then(module => WebAssembly.instantiate(module, info))
-        .then(instance => receiveInstance(instance));
-    return {};
-  };
+//  Module.instantiateWasm = (info, receiveInstance) => {
+//    wasm_promise.then(module => WebAssembly.instantiate(module, info))
+//        .then(instance => receiveInstance(instance));
+//    return {};
+//  };
 
   Module.checkABI = function(ABI_number) {
     if (ABI_number !== parseInt('{{ABI}}')) {
@@ -380,26 +369,23 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     return pyodide_module.get_completions(path);
   }
 
-      Module.locateFile = (path) => baseURL + path;
+  Module.locateFile = (path) => baseURL + path;
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
       delete self.Module;
-      fetch(`${baseURL}packages.json`)
-          .then((response) => response.json())
-          .then((json) => {
-            fixRecursionLimit(self.pyodide);
-            self.pyodide.globals =
-                self.pyodide.runPython('import sys\nsys.modules["__main__"]');
-            self.pyodide = makePublicAPI(self.pyodide, PUBLIC_API);
-            self.pyodide._module.packages = json;
-            if (self.iodide !== undefined) {
-              // Perform some completions immediately so there isn't a delay on
-              // the first call to autocomplete
-              self.pyodide.runPython('import pyodide');
-              self.pyodide.runPython('pyodide.get_completions("")');
-            }
-            resolve();
-          });
+      let json = require(`${baseURL}packages.json`)
+      fixRecursionLimit(self.pyodide);
+      self.pyodide.globals =
+          self.pyodide.runPython('import sys\nsys.modules["__main__"]');
+      self.pyodide = makePublicAPI(self.pyodide, PUBLIC_API);
+      self.pyodide._module.packages = json;
+      if (self.iodide !== undefined) {
+        // Perform some completions immediately so there isn't a delay on
+        // the first call to autocomplete
+        self.pyodide.runPython('import pyodide');
+        self.pyodide.runPython('pyodide.get_completions("")');
+      }
+      resolve(); 
     };
   });
 
@@ -413,20 +399,30 @@ var languagePluginLoader = new Promise((resolve, reject) => {
         }
   });
 
-  Promise.all([ postRunPromise, dataLoadPromise ]).then(() => resolve());
+  var isDone = false;
+  Promise.all([ postRunPromise, dataLoadPromise ]).then(() => {
+    isDone = true;
+    resolve()
+  });
+
 
   const data_script_src = `${baseURL}pyodide.asm.data.js`;
   loadScript(data_script_src, () => {
     const scriptSrc = `${baseURL}pyodide.asm.js`;
-    loadScript(scriptSrc, () => {
-      // The emscripten module needs to be at this location for the core
-      // filesystem to install itself. Once that's complete, it will be replaced
-      // by the call to `makePublicAPI` with a more limited public API.
-      self.pyodide = pyodide(Module);
-      self.pyodide.loadedPackages = {};
-      self.pyodide.loadPackage = loadPackage;
-    }, () => {});
-  }, () => {});
+    let pyodide = require(scriptSrc);
+    // The emscripten module needs to be at this location for the core
+    // filesystem to install itself. Once that's complete, it will be replaced
+    // by the call to `makePublicAPI` with a more limited public API.
+    self.pyodide = pyodide(Module);
+    self.pyodide.loadedPackages = {};
+    self.pyodide.loadPackage = loadPackage;
 
+    self.pyodide.isDoneLoading = async (cb=()=>{})=>{
+      while (!isDone){
+        cb();
+        await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
+      }
+    };
+  }, () => {});
 });
 languagePluginLoader
