@@ -1,3 +1,4 @@
+var ProgressBarPlugin = require('progress-bar-webpack-plugin');
 const path = require('path');
 
 module.exports = {
@@ -18,5 +19,8 @@ module.exports = {
       "fetch": false
     }
   },
+  plugins: [
+    new ProgressBarPlugin()
+  ],
   target: 'webworker'
 };

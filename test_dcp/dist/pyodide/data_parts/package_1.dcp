@@ -1,0 +1,7 @@
+{
+  "name": "pyodide_asm_data_part_1",
+  "version": "0.0.2",
+  "files": {
+    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/data_parts/pyodide.asm.data.part_1.js": "pyodide.asm.data.part_1.js"
+  }
+}

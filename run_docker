@@ -73,6 +73,6 @@ exec docker run \
     -p "$PYODIDE_SYSTEM_PORT":"$PYODIDE_DOCKER_PORT" \
     -it --rm \
     -v $PWD:/src \
-    --user root -e NB_UID=$(id -u) -e NB_GID=$(id -g) \
+    --user $USER -e NB_UID=$(id -u) -e NB_GID=$(id -g) \
     "${PYODIDE_DOCKER_IMAGE}" \
     /bin/bash
