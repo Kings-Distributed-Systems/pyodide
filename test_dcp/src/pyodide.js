@@ -13,7 +13,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // This is filled in by the Makefile to be either a local file or the
   // deployed location. TODO: This should be done in a less hacky
   // way.
-  var baseURL = '';
+  var baseURL = './';
 
   ////////////////////////////////////////////////////////////
   // Package loading
@@ -201,7 +201,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
             self.pyodide.loadedPackages[pkg] = toLoad[pkg];
           }
           delete self.pyodide._module.monitorRunDependencies;
-          self.removeEventListener('error', windowErrorHandler);
+          //self.removeEventListener('error', windowErrorHandler);
 
           let resolveMsg = `Loaded `;
           if (packageList.length > 0) {
@@ -221,17 +221,6 @@ var languagePluginLoader = new Promise((resolve, reject) => {
           }
         }
       };
-
-      // Add a handler for any exceptions that are thrown in the process of
-      // loading a package
-      var windowErrorHandler = (err) => {
-        delete self.pyodide._module.monitorRunDependencies;
-        self.removeEventListener('error', windowErrorHandler);
-        // Set up a new Promise chain, since this one failed
-        loadPackagePromise = new Promise((resolve) => resolve());
-        reject(err.message);
-      };
-      self.addEventListener('error', windowErrorHandler);
 
       for (let pkg in toLoad) {
         let scriptSrc;
@@ -384,7 +373,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
       delete self.Module;
-      let json = require(`./packages.json`)
+      let json = require(`${baseURL}packages.js`).json;
       fixRecursionLimit(self.pyodide);
       self.pyodide.globals =
           self.pyodide.runPython('import sys\nsys.modules["__main__"]');
@@ -417,21 +406,23 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   });
 
 
-  //require('./pyodide.asm.data.js');
-  eval( require('fs').readFileSync('./pyodide.asm.data.js').toString() );
-  let pyodide = require('./pyodide.asm.js');
-  // The emscripten module needs to be at this location for the core
-  // filesystem to install itself. Once that's complete, it will be replaced
-  // by the call to `makePublicAPI` with a more limited public API.
-  self.pyodide = pyodide(Module);
-  self.pyodide.loadedPackages = {};
-  self.pyodide.loadPackage = loadPackage;
+  const data_script_src = `${baseURL}pyodide.asm.data.js`;
+  loadScript(data_script_src, () => {
+    const scriptSrc = `${baseURL}pyodide.asm.js`;
+    let pyodide = require(scriptSrc);
+    // The emscripten module needs to be at this location for the core
+    // filesystem to install itself. Once that's complete, it will be replaced
+    // by the call to `makePublicAPI` with a more limited public API.
+    self.pyodide = pyodide(Module);
+    self.pyodide.loadedPackages = {};
+    self.pyodide.loadPackage = loadPackage;
 
-  self.pyodide.isDoneLoading = async (cb=()=>{})=>{
-    while (!isDone){
-      cb();
-      await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
-    }
-  };
+    self.pyodide.isDoneLoading = async (cb=()=>{})=>{
+      while (!isDone){
+        cb();
+        await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
+      }
+    };
+  }, () => {});
 });
 languagePluginLoader
