@@ -235,7 +235,7 @@ var Module = typeof globalObj.%(EXPORT_NAME)s !== 'undefined' ? globalObj.%(EXPO
 
 function atob(string){
     var b64 ="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-    string = String(string).replace(/[\t\n\f\r ]+/g, "");
+    string = String(string).replace(/[\\t\\n\\f\\r ]+/g, "");
 
     // Adding the padding if missing, for semplicity
     string += "==".slice(2 - (string.length & 3));
