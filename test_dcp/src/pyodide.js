@@ -226,7 +226,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
         let scriptSrc;
         let package_uri = toLoad[pkg];
         if (package_uri == 'default channel') {
-          scriptSrc = `${baseURL}${pkg}.js`;
+          scriptSrc = `${pkg}`;
         } else {
           scriptSrc = `${package_uri}`;
         }
@@ -373,7 +373,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
       delete self.Module;
-      let json = require(`${baseURL}packages.js`).json;
+      let json = require(`./packages.js`).json;
       fixRecursionLimit(self.pyodide);
       self.pyodide.globals =
           self.pyodide.runPython('import sys\nsys.modules["__main__"]');
@@ -405,24 +405,21 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     resolve()
   });
 
+ 
+  require(`./pyodide.asm.data.js`);
+  let pyodide = require(`./pyodide.asm.js`);
+  // The emscripten module needs to be at this location for the core
+  // filesystem to install itself. Once that's complete, it will be replaced
+  // by the call to `makePublicAPI` with a more limited public API.
+  self.pyodide = pyodide(Module);
+  self.pyodide.loadedPackages = {};
+  self.pyodide.loadPackage = loadPackage;
 
-  const data_script_src = `${baseURL}pyodide.asm.data.js`;
-  loadScript(data_script_src, () => {
-    const scriptSrc = `${baseURL}pyodide.asm.js`;
-    let pyodide = require(scriptSrc);
-    // The emscripten module needs to be at this location for the core
-    // filesystem to install itself. Once that's complete, it will be replaced
-    // by the call to `makePublicAPI` with a more limited public API.
-    self.pyodide = pyodide(Module);
-    self.pyodide.loadedPackages = {};
-    self.pyodide.loadPackage = loadPackage;
-
-    self.pyodide.isDoneLoading = async (cb=()=>{})=>{
-      while (!isDone){
-        cb();
-        await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
-      }
-    };
-  }, () => {});
+  self.pyodide.isDoneLoading = async (cb=()=>{})=>{
+    while (!isDone){
+      cb();
+      await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
+    }
+  };
 });
 languagePluginLoader

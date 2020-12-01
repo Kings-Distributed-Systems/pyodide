@@ -36,13 +36,42 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide.js');
-
-    console.log(typeof Module);
-    console.log(typeof pyodide);
-
+    require('pyodide');
+    try{
+      await Module.isDoneLoading(progress);
+    }catch(err){
+      try{
+        await pyodide.isDoneLoading(progress);
+      }catch(er){
+        while (typeof pyodide.isDoneLoading === 'undefined'){
+          await new Promise((resolve, reject)=> setTimeout(resolve, Math.ceil(Math.random() * 1000)));
+          progress();
+        }
+      }
+    };
     progress();
-    return;
+
+    require('numpy');
+
+    pyodide.runPython('import importlib as _importlib\n' +
+                      '_importlib.invalidate_caches()\n');
+
+    pyodide.runPython(`
+import numpy as np
+
+def random_gen(n):
+  a = np.random.rand(n, 2)
+  d = a[:,0]**2 + a[:,1]**2
+  b = d<=1
+  b = b.astype('int')
+  return b.tolist()
+
+out = random_gen(100)
+
+`);
+    console.log(pyodide.globals.out);
+    progress();
+    return "DONE" ;
   },[1]);
 
   console.log('Deploying Job!');
@@ -79,17 +108,11 @@ async function main(){
   });
 
   job.public.name = 'DCP-pyodide-Test';
-  
-  for (let i = 0; i < 7;i++){
-    job.requires(`pyodide_asm_data_part_${i+1}/pyodide.asm.data.part_${i+1}.js`);
-  };
 
-  job.requires('pyodide_all_2/packages.js');
-  job.requires('pyodide_all_2/pyodide.asm.data.js');
-  job.requires('pyodide_all_2/pyodide.asm.js');
-  job.requires('pyodide_all_2/pyodide.js');
+  job.requires('aitf-numpy_1/numpy');
+  job.requires('aitf-pyodide_5/pyodide');
 
-  await job.exec(compute.marketValue, accountKeystore);
+  await job.localExec(1, compute.marketValue, accountKeystore);
 
   console.log("Done!");
 

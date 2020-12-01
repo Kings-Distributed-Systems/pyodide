@@ -522,13 +522,11 @@ for file_ in data_files:
       parts = []
       chunk_size = 10240
       start = 0
-      #while start < len(data):
-      #  parts.append('''fileData%d.push.apply(fileData%d, %s);\n'''
-      #               % (counter, counter, str(data[start:start + chunk_size])))
-      #  start += chunk_size
-      code += '''
-fileData%d = Array.from( _base64ToUint8(`%s`) );
-''' % (counter, str(data))
+      while start < len(data):
+        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) );\n'''
+                     % (counter, counter, str(data[start:start + chunk_size])))
+        start += chunk_size
+      code += ''.join(parts)
     code += ('''Module['FS_createDataFile']('%s', '%s', fileData%d, true, true, false);\n'''
              % (dirname, basename, counter))
     counter += 1

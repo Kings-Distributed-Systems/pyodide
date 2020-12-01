@@ -14,13 +14,15 @@ module.exports = {
     fallback: { 
       "path": false, 
       "fs": false,
-      "child_process": false,
-      "crypto": false,
+      "ws": false,
+//      "buffer": require.resolve("buffer/"),
+//      "child_process": false,
+//      "crypto": require.resolve("crypto-browserify"),
       "fetch": false
     }
   },
   plugins: [
     new ProgressBarPlugin()
   ],
-  target: 'webworker'
+  target: 'node'
 };
