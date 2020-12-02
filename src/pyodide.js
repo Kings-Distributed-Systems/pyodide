@@ -300,6 +300,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     'globals',
     'loadPackage',
     'loadedPackages',
+    'isDoneLoading',
     'pyimport',
     'repr',
     'runPython',
@@ -402,27 +403,28 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var isDone = false;
   Promise.all([ postRunPromise, dataLoadPromise ]).then(() => {
     isDone = true;
+    self.pyodide.runPython(`
+import sys
+sys.setrecursionlimit(10**4)
+`);
     resolve()
   });
 
 
-  const data_script_src = `${baseURL}pyodide.asm.data.js`;
-  loadScript(data_script_src, () => {
-    const scriptSrc = `${baseURL}pyodide.asm.js`;
-    let pyodide = require(scriptSrc);
-    // The emscripten module needs to be at this location for the core
-    // filesystem to install itself. Once that's complete, it will be replaced
-    // by the call to `makePublicAPI` with a more limited public API.
-    self.pyodide = pyodide(Module);
-    self.pyodide.loadedPackages = {};
-    self.pyodide.loadPackage = loadPackage;
+  require('./pyodide.asm.data.js');
+  let pyodide = require('./pyodide.asm.js');
+     // The emscripten module needs to be at this location for the core
+  // filesystem to install itself. Once that's complete, it will be replaced
+  // by the call to `makePublicAPI` with a more limited public API.
+  self.pyodide = pyodide(Module);
+  self.pyodide.loadedPackages = {};
+  self.pyodide.loadPackage = loadPackage;
 
-    self.pyodide.isDoneLoading = async (cb=()=>{})=>{
-      while (!isDone){
-        cb();
-        await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
-      }
-    };
-  }, () => {});
+  self.pyodide.isDoneLoading = async (cb=()=>{})=>{
+    while (!isDone){
+      cb();
+      await new Promise((resolve,reject)=>{ setTimeout(resolve, 1000) });
+    }
+  };
 });
-languagePluginLoader
+languagePluginLoader;

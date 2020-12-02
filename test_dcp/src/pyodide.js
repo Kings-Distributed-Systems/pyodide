@@ -13,7 +13,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // This is filled in by the Makefile to be either a local file or the
   // deployed location. TODO: This should be done in a less hacky
   // way.
-  var baseURL = './';
+  var baseURL = '';
 
   ////////////////////////////////////////////////////////////
   // Package loading
@@ -84,7 +84,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
 
   function loadScript(url, onload, onerror) {
     if (typeof require !== 'undefined'){
-      require(url);
+      eval(`require`)(url);
       onload();
     }else if (self.document) { // browser
       const script = self.document.createElement('script');
@@ -226,7 +226,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
         let scriptSrc;
         let package_uri = toLoad[pkg];
         if (package_uri == 'default channel') {
-          scriptSrc = `${pkg}`;
+          scriptSrc = `${baseURL}${pkg}.js`;
         } else {
           scriptSrc = `${package_uri}`;
         }
@@ -405,8 +405,8 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     resolve()
   });
 
- 
-  require(`./pyodide.asm.data.js`);
+
+  require(`./pyodide.asm.data.js`); 
   let pyodide = require(`./pyodide.asm.js`);
   // The emscripten module needs to be at this location for the core
   // filesystem to install itself. Once that's complete, it will be replaced

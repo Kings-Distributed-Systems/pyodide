@@ -72,6 +72,7 @@ import random
 import uuid
 import ctypes
 import base64
+import zlib
 
 emscripten_dir = os.path.join(
   os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -515,6 +516,7 @@ for file_ in data_files:
   if file_['mode'] == 'embed':
     # Embed
     data = open(file_['srcpath'], 'rb').read() #data in bytes
+    data = zlib.compress(data)
     data = base64.b64encode(data)
     data = data.decode('ascii')
     code += '''var fileData%d = [];\n''' % counter
@@ -523,7 +525,7 @@ for file_ in data_files:
       chunk_size = 10240
       start = 0
       while start < len(data):
-        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) );\n'''
+        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) ) );\n'''
                      % (counter, counter, str(data[start:start + chunk_size])))
         start += chunk_size
       code += ''.join(parts)

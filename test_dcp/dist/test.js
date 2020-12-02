@@ -50,12 +50,16 @@ async function main(){
       }
     };
     progress();
-
+    pyodide.runPython('print("HELLO WORLD")');
     require('numpy');
 
     pyodide.runPython('import importlib as _importlib\n' +
                       '_importlib.invalidate_caches()\n');
-
+    pyodide.runPython(`
+import sys
+sys.setrecursionlimit(10**6)
+print("RECURSION LIMIT: ", sys.getrecursionlimit())
+    `);
     pyodide.runPython(`
 import numpy as np
 
@@ -109,10 +113,9 @@ out = random_gen(100)
 
   job.public.name = 'DCP-pyodide-Test';
 
-  job.requires('aitf-numpy_1/numpy');
-  job.requires('aitf-pyodide_5/pyodide');
-
-  await job.localExec(1, compute.marketValue, accountKeystore);
+  job.requires('aitf-pyodide_8/pyodide');
+  job.requires('aitf-numpy_3/numpy');
+  await job.exec(compute.marketValue, accountKeystore);
 
   console.log("Done!");
 

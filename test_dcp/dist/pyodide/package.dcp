@@ -1,5 +1,5 @@
 {
-  "name": "aitf-pyodide_5",
+  "name": "aitf-pyodide_8",
   "version": "0.0.1",
   "files": {
     "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.js":"pyodide.js"
