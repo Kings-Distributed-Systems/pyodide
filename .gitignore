@@ -1,4 +1,4 @@
-
+test_dcp/*.js
 *node_modules/
 *.bc
 *.a
