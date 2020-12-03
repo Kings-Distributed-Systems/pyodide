@@ -260,6 +260,18 @@ function _base64ToUint8(base64){
     return binArray;
 };
 
+await new Promise((resolve, reject) => {
+    try {
+        module.provide(["aitf-compress/pako.js"], () => {
+            resolve();
+        });
+    } catch(error) {
+        console.log("Unable to load modules during worker runtime: " + moduleProvideArray);
+        reject(error);
+    }
+});
+const pako = require("pako");
+
 ''' % {"EXPORT_NAME": export_name}
 
 ret += '''
@@ -525,7 +537,7 @@ for file_ in data_files:
       chunk_size = 10240
       start = 0
       while start < len(data):
-        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) ) );\n'''
+        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(pako.inflate(_base64ToUint8(`%s`) ) ) );\n'''
                      % (counter, counter, str(data[start:start + chunk_size])))
         start += chunk_size
       code += ''.join(parts)
