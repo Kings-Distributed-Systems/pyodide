@@ -260,17 +260,12 @@ function _base64ToUint8(base64){
     return binArray;
 };
 
-await new Promise((resolve, reject) => {
-    try {
-        module.provide(["aitf-compress/pako.js"], () => {
-            resolve();
-        });
-    } catch(error) {
-        console.log("Unable to load modules during worker runtime: " + moduleProvideArray);
-        reject(error);
-    }
-});
-const pako = require("pako");
+
+var pako = globalObj.pako;
+if (typeof pako === 'undefined'){
+    pako = require('./pako');
+    globalObj.pako = pako;
+}
 
 ''' % {"EXPORT_NAME": export_name}
 
@@ -529,18 +524,20 @@ for file_ in data_files:
     # Embed
     data = open(file_['srcpath'], 'rb').read() #data in bytes
     data = zlib.compress(data)
-    data = base64.b64encode(data)
-    data = data.decode('ascii')
     code += '''var fileData%d = [];\n''' % counter
     if data:
       parts = []
       chunk_size = 10240
       start = 0
       while start < len(data):
-        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(pako.inflate(_base64ToUint8(`%s`) ) ) );\n'''
-                     % (counter, counter, str(data[start:start + chunk_size])))
+        data_c = data[start:start+chunk_size]
+        data_c = base64.b64encode(data_c)
+        data_c = data_c.decode('ascii')
+        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) ) );\n'''
+                     % (counter, counter, str(data_c)))
         start += chunk_size
       code += ''.join(parts)
+    code += ('''fileData%d = Array.from(pako.inflate( fileData%d ) );\n''' % (counter, counter ))
     code += ('''Module['FS_createDataFile']('%s', '%s', fileData%d, true, true, false);\n'''
              % (dirname, basename, counter))
     counter += 1
