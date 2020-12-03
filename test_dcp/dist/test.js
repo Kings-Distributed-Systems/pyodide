@@ -36,7 +36,7 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide');
+    require('pyodide_2');
     try{
       await Module.isDoneLoading(progress);
     }catch(err){
@@ -49,31 +49,21 @@ async function main(){
         }
       }
     };
-    progress();
-    pyodide.runPython('print("HELLO WORLD")');
-    require('numpy');
-
-    pyodide.runPython('import importlib as _importlib\n' +
-                      '_importlib.invalidate_caches()\n');
     pyodide.runPython(`
+import os
 import sys
-sys.setrecursionlimit(10**6)
-print("RECURSION LIMIT: ", sys.getrecursionlimit())
-    `);
-    pyodide.runPython(`
 import numpy as np
 
-def random_gen(n):
-  a = np.random.rand(n, 2)
-  d = a[:,0]**2 + a[:,1]**2
-  b = d<=1
-  b = b.astype('int')
-  return b.tolist()
+print("Hello World!");
 
-out = random_gen(100)
+print(sys.getrecursionlimit())
+
+a = np.ones([10,10])
+
+print(a.shape)
+
 
 `);
-    console.log(pyodide.globals.out);
     progress();
     return "DONE" ;
   },[1]);
@@ -113,9 +103,9 @@ out = random_gen(100)
 
   job.public.name = 'DCP-pyodide-Test';
 
-  job.requires('aitf-pyodide_8/pyodide');
-  job.requires('aitf-numpy_3/numpy');
-  await job.exec(compute.marketValue, accountKeystore);
+  job.requires('aitf-pyodide_dev/pyodide_2');
+  job.requires('aitf-numpy_5/numpy');
+  await job.localExec(1, compute.marketValue, accountKeystore);
 
   console.log("Done!");
 

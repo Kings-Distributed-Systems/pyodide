@@ -1,7 +1,6 @@
 /**
  * The main bootstrap script for loading pyodide.
  */
-
 var languagePluginLoader = new Promise((resolve, reject) => {
   
   if (typeof self === 'undefined'){
@@ -226,7 +225,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
         let scriptSrc;
         let package_uri = toLoad[pkg];
         if (package_uri == 'default channel') {
-          scriptSrc = `${baseURL}${pkg}.js`;
+          scriptSrc = `${baseURL}${pkg}`;
         } else {
           scriptSrc = `${package_uri}`;
         }
@@ -300,6 +299,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     'globals',
     'loadPackage',
     'loadedPackages',
+    'isDoneLoading',
     'pyimport',
     'repr',
     'runPython',
@@ -373,7 +373,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
       delete self.Module;
-      let json = require(`./packages.js`).json;
+      let json = require(`./packages.json`)
       fixRecursionLimit(self.pyodide);
       self.pyodide.globals =
           self.pyodide.runPython('import sys\nsys.modules["__main__"]');
@@ -402,13 +402,17 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var isDone = false;
   Promise.all([ postRunPromise, dataLoadPromise ]).then(() => {
     isDone = true;
+    self.pyodide.runPython(`
+import sys
+sys.setrecursionlimit(10**4)
+`);
     resolve()
   });
 
 
-  require(`./pyodide.asm.data.js`); 
-  let pyodide = require(`./pyodide.asm.js`);
-  // The emscripten module needs to be at this location for the core
+  require('./pyodide.asm.data.js');
+  let pyodide = require('./pyodide.asm.js');
+     // The emscripten module needs to be at this location for the core
   // filesystem to install itself. Once that's complete, it will be replaced
   // by the call to `makePublicAPI` with a more limited public API.
   self.pyodide = pyodide(Module);
@@ -422,4 +426,4 @@ var languagePluginLoader = new Promise((resolve, reject) => {
     }
   };
 });
-languagePluginLoader
+languagePluginLoader;
