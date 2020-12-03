@@ -13,7 +13,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // This is filled in by the Makefile to be either a local file or the
   // deployed location. TODO: This should be done in a less hacky
   // way.
-  var baseURL = './';
+  var baseURL = '';
 
   ////////////////////////////////////////////////////////////
   // Package loading
@@ -84,7 +84,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
 
   function loadScript(url, onload, onerror) {
     if (typeof require !== 'undefined'){
-      require(url);
+      eval(`require`)(url);
       onload();
     }else if (self.document) { // browser
       const script = self.document.createElement('script');
@@ -374,7 +374,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var postRunPromise = new Promise((resolve, reject) => {
     Module.postRun = () => {
       delete self.Module;
-      let json = require(`${baseURL}packages.json`)
+      let json = require(`./packages.json`)
       fixRecursionLimit(self.pyodide);
       self.pyodide.globals =
           self.pyodide.runPython('import sys\nsys.modules["__main__"]');
