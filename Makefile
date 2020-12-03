@@ -101,7 +101,6 @@ build/pyodide.asm.data.js: root/.built
 	( \
 		cd build; \
 		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --embed ../root/lib@lib --js-output=pyodide.asm.data.js \
-		cp ../pako.js ./pako.js \
 	)	
 
 

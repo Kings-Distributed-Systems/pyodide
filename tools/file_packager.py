@@ -524,7 +524,7 @@ for file_ in data_files:
     # Embed
     data = open(file_['srcpath'], 'rb').read() #data in bytes
     data = zlib.compress(data)
-    code += '''var fileData%d = [];\n''' % counter
+    code += '''var fileData%d = new Uint8Array(%d);\n''' % (counter, len(data))
     if data:
       parts = []
       chunk_size = 10240
@@ -533,11 +533,14 @@ for file_ in data_files:
         data_c = data[start:start+chunk_size]
         data_c = base64.b64encode(data_c)
         data_c = data_c.decode('ascii')
-        parts.append('''fileData%d.push.apply( fileData%d  , Array.from(_base64ToUint8(`%s`) ) );\n'''
-                     % (counter, counter, str(data_c)))
+        parts.append(
+'''
+fileData%d.set( _base64ToUint8(`%s`), %d );\n
+''' % (counter, str(data_c), start)
+        ) #start is the offset for which we are starting to fill the uint8array with
         start += chunk_size
       code += ''.join(parts)
-    code += ('''fileData%d = Array.from(pako.inflate( fileData%d ) );\n''' % (counter, counter ))
+    code += ('''fileData%d = pako.inflate( fileData%d ) ;\n''' % (counter, counter ))
     code += ('''Module['FS_createDataFile']('%s', '%s', fileData%d, true, true, false);\n'''
              % (dirname, basename, counter))
     counter += 1
