@@ -1,8 +1,8 @@
 {
   "name": "aitf-pyodide_dev",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "files": {
-    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.js":"pyodide_2.js"
+    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.js":"pyodide_3.js"
   }
 }
 

@@ -1,6 +1,13 @@
 /**
  * The main bootstrap script for loading pyodide.
  */
+
+crypto = typeof crypto !== 'undefined'? crypto : {
+  getRandomValues: function(array) {
+      for (var i = 0; i < array.length; i++) array[i] = (Math.random() * 256) | 0
+  }
+};
+
 var languagePluginLoader = new Promise((resolve, reject) => {
   
   if (typeof self === 'undefined'){
@@ -82,22 +89,11 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // clang-format on
 
   function loadScript(url, onload, onerror) {
-    if (typeof require !== 'undefined'){
+    try{
       eval(`require`)(url);
       onload();
-    }else if (self.document) { // browser
-      const script = self.document.createElement('script');
-      script.src = url;
-      script.onload = (e) => { onload(); };
-      script.onerror = (e) => { onerror(); };
-      self.document.head.appendChild(script);
-    } else if (self.importScripts) { // webworker
-      try {
-        self.importScripts(url);
-        onload();
-      } catch {
-        onerror();
-      }
+    }catch(err){
+      onerror(err);
     }
   }
 
@@ -200,51 +196,44 @@ var languagePluginLoader = new Promise((resolve, reject) => {
             self.pyodide.loadedPackages[pkg] = toLoad[pkg];
           }
           delete self.pyodide._module.monitorRunDependencies;
-          //self.removeEventListener('error', windowErrorHandler);
-
           let resolveMsg = `Loaded `;
           if (packageList.length > 0) {
             resolveMsg += packageList.join(', ');
           } else {
             resolveMsg += 'no packages'
           }
-
-          if (!isFirefox) {
-            preloadWasm().then(() => {
-              console.log(resolveMsg);
-              resolve(resolveMsg);
-            });
-          } else {
-            console.log(resolveMsg);
-            resolve(resolveMsg);
-          }
+          //make sure it is run before resolving
+          self.pyodide.runPython('import importlib as _importlib\n' +
+          '_importlib.invalidate_caches()\n');
+          resolve(resolveMsg);
         }
       };
 
       for (let pkg in toLoad) {
         let scriptSrc;
-        let package_uri = toLoad[pkg];
-        if (package_uri == 'default channel') {
-          scriptSrc = `${baseURL}${pkg}`;
-        } else {
-          scriptSrc = `${package_uri}`;
-        }
+        scriptSrc = `${baseURL}${pkg}`;
         _messageCallback(`Loading ${pkg} from ${scriptSrc}`)
-        loadScript(scriptSrc, () => {}, () => {
-          // If the package_uri fails to load, call monitorRunDependencies twice
-          // (so packageCounter will still hit 0 and finish loading), and remove
-          // the package from toLoad so we don't mark it as loaded, and remove
-          // the package from packageList so we don't say that it was loaded.
-          _errorCallback(`Couldn't load package from URL ${scriptSrc}`);
+        let targetCounter = packageCounter-2;
+        try{
+          self.pyodide._module.monitorRunDependencies();
+          eval(`require`)(scriptSrc);
+          self.pyodide._module.monitorRunDependencies();
+        }catch(err){
+          //module.provide should go here and then require again 
+
+          
+          _errorCallback(`Couldn't load package from ${scriptSrc}`);
           delete toLoad[pkg];
           let packageListIndex = packageList.indexOf(pkg);
-          if (packageListIndex !== -1) {
+          if (packageListIndex != -1){
             packageList.splice(packageListIndex, 1);
+          }                                     
+          if (packageCounter != targetCounter){
+            for (let i = 0; i < (packageCounter - targetCounter); i++){
+              self.pyodide._module.monitorRunDependencies();
+            }                 
           }
-          for (let i = 0; i < 2; i++) {
-            self.pyodide._module.monitorRunDependencies();
-          }
-        });
+        };
       }
 
       // We have to invalidate Python's import caches, or it won't
@@ -252,6 +241,9 @@ var languagePluginLoader = new Promise((resolve, reject) => {
       // with the fetching over the network.
       self.pyodide.runPython('import importlib as _importlib\n' +
                              '_importlib.invalidate_caches()\n');
+      while (packageCounter != 0){
+        self.pyodide._module.monitorRunDependencies();
+      }      
     });
 
     return promise;
@@ -285,10 +277,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
       ;
     }
 
-    let recursionLimit = depth / 50;
-    if (recursionLimit > 1000) {
-      recursionLimit = 1000;
-    }
+    let recursionLimit = 10000;
     pyodide.runPython(
         `import sys; sys.setrecursionlimit(int(${recursionLimit}))`);
   };
@@ -328,30 +317,6 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   Module.noWasmDecoding = true;
   Module.preloadedWasm = {};
   let isFirefox = false;//navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
-//  let wasm_promise, wasm_fetch = fetch(wasmURL);
-//  const compileBuffer = () =>
-//      wasm_fetch.then(response => response.arrayBuffer())
-//          .then(bytes => WebAssembly.compile(bytes));
-//  if (WebAssembly.compileStreaming === undefined) {
-//    wasm_promise = compileBuffer();
-//  } else {
-//    wasm_promise = WebAssembly.compileStreaming(wasm_fetch);
-//    wasm_promise = wasm_promise.catch(e => {
-//      if (e instanceof TypeError) {
-//        console.error("pyodide streaming compilation failed:", e,
-//                      "- falling back to buffered compilation");
-//        return compileBuffer()
-//      }
-//      throw e;
-//    });
-//  }
-
-//  Module.instantiateWasm = (info, receiveInstance) => {
-//    wasm_promise.then(module => WebAssembly.instantiate(module, info))
-//        .then(instance => receiveInstance(instance));
-//    return {};
-//  };
 
   Module.checkABI = function(ABI_number) {
     if (ABI_number !== parseInt('1')) {
@@ -402,10 +367,6 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   var isDone = false;
   Promise.all([ postRunPromise, dataLoadPromise ]).then(() => {
     isDone = true;
-    self.pyodide.runPython(`
-import sys
-sys.setrecursionlimit(10**4)
-`);
     resolve()
   });
 

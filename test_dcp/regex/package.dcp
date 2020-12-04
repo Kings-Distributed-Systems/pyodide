@@ -1,0 +1,7 @@
+{
+  "name": "aitf-regex_1",
+  "version": "0.0.1",
+  "files": {
+    "/home/mgasmallah/DCP/pyodide/test_dcp/regex/regex.js":"regex.js"
+  }
+}

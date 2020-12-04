@@ -220,7 +220,6 @@ var languagePluginLoader = new Promise((resolve, reject) => {
           self.pyodide._module.monitorRunDependencies();
         }catch(err){
           //module.provide should go here and then require again 
-
           
           _errorCallback(`Couldn't load package from ${scriptSrc}`);
           delete toLoad[pkg];

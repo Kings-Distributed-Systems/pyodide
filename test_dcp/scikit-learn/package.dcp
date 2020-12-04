@@ -1,0 +1,7 @@
+{
+  "name": "aitf-scikit-learn_1",
+  "version": "0.0.1",
+  "files": {
+    "/home/mgasmallah/DCP/pyodide/test_dcp/scikit-learn/scikit-learn.js":"scikit-learn.js"
+  }
+}

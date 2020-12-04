@@ -36,7 +36,7 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide_2');
+    require('pyodide_3');
     try{
       await Module.isDoneLoading(progress);
     }catch(err){
@@ -47,23 +47,28 @@ async function main(){
           await new Promise((resolve, reject)=> setTimeout(resolve, Math.ceil(Math.random() * 1000)));
           progress();
         }
+        await pyodide.isDoneLoading(progress);
       }
     };
-    pyodide.runPython(`
-import os
-import sys
-import numpy as np
 
-print("Hello World!");
+    await pyodide.runPythonAsync(`
+from scipy import signal
+from autograd import grad
+from autograd import numpy as np
+import nltk
+from sklearn.naive_bayes import GaussianNB
+from js import progress
 
-print(sys.getrecursionlimit())
+progress()
 
-a = np.ones([10,10])
-
-print(a.shape)
-
+print('nltk: ',nltk)
+print('autograd.grad: ', grad)
+print('numpy autograd wrapped: ', np)
+print('scipy.signal : ', signal)
+print('sklearn.naive_bayes.GaussianNB: ', GaussianNB)
 
 `);
+
     progress();
     return "DONE" ;
   },[1]);
@@ -103,8 +108,18 @@ print(a.shape)
 
   job.public.name = 'DCP-pyodide-Test';
 
-  job.requires('aitf-pyodide_dev/pyodide_2');
+
+  job.requirements.environment.offscreenCanvas = false;
+
+  job.requires('aitf-pyodide_dev/pyodide_3');
   job.requires('aitf-numpy_5/numpy');
+  job.requires('aitf-scipy_6/scipy');
+  job.requires('aitf-autograd_2/autograd');
+  job.requires('aitf-future_2/future');
+  job.requires('aitf-regex_1/regex');
+  job.requires('aitf-nltk_1/nltk');
+  job.requires('aitf-scikit-learn_1/scikit-learn');
+  job.requires('aitf-joblib_1/joblib');
   await job.localExec(1, compute.marketValue, accountKeystore);
 
   console.log("Done!");
