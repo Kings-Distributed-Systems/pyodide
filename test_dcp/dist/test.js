@@ -58,6 +58,10 @@ from autograd import numpy as np
 import nltk
 from sklearn.naive_bayes import GaussianNB
 from js import progress
+from builtins import range
+
+
+print(range)
 
 progress()
 
