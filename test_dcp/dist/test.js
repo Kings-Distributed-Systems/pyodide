@@ -36,7 +36,7 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide_3');
+    require('pyodide_4');
     try{
       await Module.isDoneLoading(progress);
     }catch(err){
@@ -50,20 +50,20 @@ async function main(){
         await pyodide.isDoneLoading(progress);
       }
     };
-
+    pyprogress = ()=>{console.log("PROGRESS INSIDE PYTHON");progress();};
     await pyodide.runPythonAsync(`
 from scipy import signal
+from scipy.optimize import minimize, OptimizeResult
 from autograd import grad
+from autograd import value_and_grad
 from autograd import numpy as np
 import nltk
 from sklearn.naive_bayes import GaussianNB
-from js import progress
+from js import pyprogress
 from builtins import range
 
-
+pyprogress()
 print(range)
-
-progress()
 
 print('nltk: ',nltk)
 print('autograd.grad: ', grad)
@@ -71,6 +71,9 @@ print('numpy autograd wrapped: ', np)
 print('scipy.signal : ', signal)
 print('sklearn.naive_bayes.GaussianNB: ', GaussianNB)
 
+
+
+print(np.ones([10,10]).shape)
 `);
 
     progress();
@@ -113,9 +116,9 @@ print('sklearn.naive_bayes.GaussianNB: ', GaussianNB)
   job.public.name = 'DCP-pyodide-Test';
 
 
-  job.requirements.environment.offscreenCanvas = false;
+//  job.requirements.environment.offscreenCanvas = false;
 
-  job.requires('aitf-pyodide_dev/pyodide_3');
+  job.requires('aitf-pyodide_dev/pyodide_4');
   job.requires('aitf-numpy_5/numpy');
   job.requires('aitf-scipy_6/scipy');
   job.requires('aitf-autograd_2/autograd');
@@ -124,7 +127,7 @@ print('sklearn.naive_bayes.GaussianNB: ', GaussianNB)
   job.requires('aitf-nltk_1/nltk');
   job.requires('aitf-scikit-learn_1/scikit-learn');
   job.requires('aitf-joblib_1/joblib');
-  await job.localExec(1, compute.marketValue, accountKeystore);
+  await job.exec( compute.marketValue, accountKeystore);
 
   console.log("Done!");
 

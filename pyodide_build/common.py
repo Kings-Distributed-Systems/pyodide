@@ -22,6 +22,10 @@ DEFAULTLDFLAGS = " ".join(
         "WASM=1",
         "-s",
         "SINGLE_FILE=1",
+        "-s",
+        "TOTAL_MEMORY=36700160",
+        "-s",
+        "TOTAL_STACK=15728640",
         "--memory-init-file",
         "0",
     ]

@@ -27,6 +27,9 @@ export SIDE_LDFLAGS=\
   -s EMULATE_FUNCTION_POINTER_CASTS=1 \
   -s SIDE_MODULE=1 \
 	-s WASM=1 \
+	-s SINGLE_FILE=1 \
+	-s TOTAL_MEMORY=36700160 \
+	-s TOTAL_STACK=15728640 \
   -s "BINARYEN_TRAP_MODE='clamp'" \
   --memory-init-file 0 \
   -s LINKABLE=1 \
