@@ -1,0 +1,9 @@
+package:
+  name: vaderSentiment
+  version: 3.3.2
+source:
+  sha256: 5d7c06e027fc8b99238edb0d53d970cf97066ef97654009890b83703849632f9
+  url: https://files.pythonhosted.org/packages/77/8c/4a48c10a50f750ae565e341e697d74a38075a3e43ff0df6f1ab72e186902/vaderSentiment-3.3.2.tar.gz
+test:
+  imports:
+  - vaderSentiment

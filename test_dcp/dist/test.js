@@ -36,7 +36,7 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide_4');
+    require('pyodide_5');
     try{
       await Module.isDoneLoading(progress);
     }catch(err){
@@ -118,7 +118,7 @@ print(np.ones([10,10]).shape)
 
 //  job.requirements.environment.offscreenCanvas = false;
 
-  job.requires('aitf-pyodide_dev/pyodide_4');
+  job.requires('aitf-pyodide_dev/pyodide_5');
   job.requires('aitf-numpy_5/numpy');
   job.requires('aitf-scipy_6/scipy');
   job.requires('aitf-autograd_2/autograd');
