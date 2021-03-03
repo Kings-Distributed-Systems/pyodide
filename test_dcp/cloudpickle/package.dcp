@@ -1,0 +1,7 @@
+{
+  "name": "aitf-cloudpickle_6",
+  "version": "0.0.1",
+  "files": {
+    "/home/hamada/DCP/pyodide/test_dcp/cloudpickle/cloudpickle.js":"cloudpickle.js"
+  }
+}

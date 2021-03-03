@@ -36,13 +36,48 @@ async function main(){
   job = compute.for([...Array(numWorkers).keys()],async function(sim_id, iternum){
     progress();
 
-    require('pyodide.js');
+    require('pyodide_5');
+    try{
+      await Module.isDoneLoading(progress);
+    }catch(err){
+      try{
+        await pyodide.isDoneLoading(progress);
+      }catch(er){
+        while (typeof pyodide.isDoneLoading === 'undefined'){
+          await new Promise((resolve, reject)=> setTimeout(resolve, Math.ceil(Math.random() * 1000)));
+          progress();
+        }
+        await pyodide.isDoneLoading(progress);
+      }
+    };
+    pyprogress = ()=>{console.log("PROGRESS INSIDE PYTHON");progress();};
+    await pyodide.runPythonAsync(`
+from scipy import signal
+from scipy.optimize import minimize, OptimizeResult
+from autograd import grad
+from autograd import value_and_grad
+from autograd import numpy as np
+import nltk
+from sklearn.naive_bayes import GaussianNB
+from js import pyprogress
+from builtins import range
 
-    console.log(typeof Module);
-    console.log(typeof pyodide);
+pyprogress()
+print(range)
+
+print('nltk: ',nltk)
+print('autograd.grad: ', grad)
+print('numpy autograd wrapped: ', np)
+print('scipy.signal : ', signal)
+print('sklearn.naive_bayes.GaussianNB: ', GaussianNB)
+
+
+
+print(np.ones([10,10]).shape)
+`);
 
     progress();
-    return;
+    return "DONE" ;
   },[1]);
 
   console.log('Deploying Job!');
@@ -79,17 +114,20 @@ async function main(){
   });
 
   job.public.name = 'DCP-pyodide-Test';
-  
-  for (let i = 0; i < 7;i++){
-    job.requires(`pyodide_asm_data_part_${i+1}/pyodide.asm.data.part_${i+1}.js`);
-  };
 
-  job.requires('pyodide_all_2/packages.js');
-  job.requires('pyodide_all_2/pyodide.asm.data.js');
-  job.requires('pyodide_all_2/pyodide.asm.js');
-  job.requires('pyodide_all_2/pyodide.js');
 
-  await job.exec(compute.marketValue, accountKeystore);
+//  job.requirements.environment.offscreenCanvas = false;
+
+  job.requires('aitf-pyodide_dev/pyodide_5');
+  job.requires('aitf-numpy_5/numpy');
+  job.requires('aitf-scipy_6/scipy');
+  job.requires('aitf-autograd_2/autograd');
+  job.requires('aitf-future_2/future');
+  job.requires('aitf-regex_1/regex');
+  job.requires('aitf-nltk_1/nltk');
+  job.requires('aitf-scikit-learn_1/scikit-learn');
+  job.requires('aitf-joblib_1/joblib');
+  await job.exec( compute.marketValue, accountKeystore);
 
   console.log("Done!");
 

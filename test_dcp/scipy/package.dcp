@@ -1,0 +1,7 @@
+{
+  "name": "aitf-scipy_6",
+  "version": "0.0.1",
+  "files": {
+    "/home/mgasmallah/DCP/pyodide/test_dcp/scipy/scipy.js":"scipy.js"
+  }
+}

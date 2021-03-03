@@ -1,0 +1,9 @@
+package:
+  name: welch-dcp
+  version: '1.0'
+source:
+  sha256: 6095668f21f3063260b33367560524bba3869b12c9ec00e334eb07525a66ec00
+  url: https://files.pythonhosted.org/packages/ec/a4/73e362d043dcc003c99751b7610ee5019c08214de54fca53c61db5255965/welch_dcp-1.0.tar.gz
+test:
+  imports:
+  - welch-dcp

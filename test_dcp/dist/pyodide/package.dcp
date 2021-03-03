@@ -1,10 +1,8 @@
 {
-  "name": "pyodide_all_2",
-  "version": "0.0.1",
+  "name": "aitf-pyodide_dev",
+  "version": "0.0.5",
   "files": {
-    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/packages.js": "packages.js",
-    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.asm.data.js": "pyodide.asm.data.js",
-    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.asm.js": "pyodide.asm.js",
-    "/home/mgasmallah/DCP/pyodide/test_dcp/dist/pyodide/pyodide.js": "pyodide.js"
+    "/home/hamada/DCP/pyodide/test_dcp/dist/pyodide/pyodide.js":"pyodide_5.js"
   }
 }
+
