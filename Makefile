@@ -4,7 +4,7 @@ include Makefile.envs
 
 .PHONY=check
 
-FILEPACKAGER=$$EM_DIR/tools/file_packager.py
+FILEPACKAGER=$(PYODIDE_ROOT)/tools/file_packager.py
 UGLIFYJS=$(PYODIDE_ROOT)/node_modules/.bin/uglifyjs
 
 CPYTHONROOT=cpython
