@@ -29,13 +29,13 @@ LDFLAGS=\
 	$(CPYTHONROOT)/installs/python-$(PYVERSION)/lib/libpython$(PYMINOR).a \
 	-s TOTAL_MEMORY=20971520 \
 	-s ALLOW_MEMORY_GROWTH=1 \
-    --use-preload-plugins \
 	-s MAIN_MODULE=1 \
 	-s EMULATE_FUNCTION_POINTER_CASTS=1 \
 	-s LINKABLE=1 \
 	-s EXPORT_ALL=1 \
 	-s EXPORTED_FUNCTIONS='["___cxa_guard_acquire", "__ZNSt3__28ios_base4initEPv", "_main"]' \
 	-s WASM=1 \
+  -s SINGLE_FILE=1 \
 	-s USE_FREETYPE=1 \
 	-s USE_LIBPNG=1 \
 	-std=c++14 \
@@ -50,7 +50,7 @@ all: check \
 	build/pyodide.asm.js \
 	build/pyodide.js \
 	build/console.html \
-	build/test.data \
+	build/test.js \
 	build/packages.json \
 	build/test.html \
 	build/webworker.js \
@@ -75,13 +75,13 @@ build/pyodide.asm.js: \
 	$(CPYTHONLIB)
 	date +"[%F %T] Building pyodide.asm.js..."
 	[ -d build ] || mkdir build
-	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.js $(filter %.o,$^) \
-		$(LDFLAGS) -s FORCE_FILESYSTEM=1 \
-		--preload-file $(CPYTHONLIB)@/lib/python$(PYMINOR) \
-		--preload-file src/webbrowser.py@/lib/python$(PYMINOR)/webbrowser.py \
-		--preload-file src/_testcapi.py@/lib/python$(PYMINOR)/_testcapi.py \
-		--preload-file src/pystone.py@/lib/python$(PYMINOR)/pystone.py \
-		--preload-file src/pyodide-py/pyodide@/lib/python$(PYMINOR)/site-packages/pyodide \
+	$(CXX)  -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.js $(filter %.o,$^) \
+		$(LDFLAGS) -s FORCE_FILESYSTEM=1 -s SINGLE_FILE=1 \
+		--embed-file $(CPYTHONLIB)@/lib/python$(PYMINOR) \
+		--embed-file src/webbrowser.py@/lib/python$(PYMINOR)/webbrowser.py \
+		--embed-file src/_testcapi.py@/lib/python$(PYMINOR)/_testcapi.py \
+		--embed-file src/pystone.py@/lib/python$(PYMINOR)/pystone.py \
+		--embed-file src/pyodide-py/pyodide@/lib/python$(PYMINOR)/site-packages/pyodide \
 		--exclude-file "*__pycache__*" \
 		--exclude-file "*/test/*"
 	date +"[%F %T] done building pyodide.asm.js."
@@ -91,8 +91,9 @@ env:
 	env
 
 
-build/pyodide.js: src/pyodide.js
+build/pyodide.js: src/pyodide.js src/pako.js
 	cp $< $@
+	cp src/pako.js build/pako.js
 	sed -i -e 's#{{ PYODIDE_BASE_URL }}#$(PYODIDE_BASE_URL)#g' $@
 
 
@@ -149,14 +150,14 @@ clean-all: clean
 	$(CC) -o $@ -c $< $(CFLAGS) -Isrc/core/
 
 
-build/test.data: $(CPYTHONLIB) $(UGLIFYJS)
+build/test.js: $(CPYTHONLIB) $(UGLIFYJS)
 	( \
 		cd $(CPYTHONLIB)/test; \
 		find . -type d -name __pycache__ -prune -exec rm -rf {} \; \
 	)
 	( \
 		cd build; \
-		python $(FILEPACKAGER) test.data --lz4 --preload ../$(CPYTHONLIB)/test@/lib/python$(PYMINOR)/test --js-output=test.js --export-name=pyodide._module --exclude __pycache__ \
+		python $(FILEPACKAGER) test.data --lz4 --embed ../$(CPYTHONLIB)/test@/lib/python$(PYMINOR)/test --js-output=test.js --export-name=pyodide._module --exclude __pycache__ \
 	)
 	$(UGLIFYJS) build/test.js -o build/test.js
 

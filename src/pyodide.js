@@ -2,13 +2,23 @@
  * The main bootstrap script for loading pyodide.
  */
 
-globalThis.languagePluginLoader = (async () => {
+var getGlobal = function () {
+  if (typeof self !== 'undefined') { return self; }
+  if (typeof window !== 'undefined') { return window; }
+  if (typeof global !== 'undefined') { return global; }
+  throw new Error('unable to locate global object');
+};
+
+var globalThis = getGlobal();
+
+
+
+exports.loadPyodide = async () => {
   let Module = {};
   // Note: PYODIDE_BASE_URL is an environement variable replaced in
   // in this template in the Makefile. It's recommended to always set
   // languagePluginUrl in any case.
-  let baseURL = self.languagePluginUrl || '{{ PYODIDE_BASE_URL }}';
-  baseURL = baseURL.substr(0, baseURL.lastIndexOf('/')) + '/';
+  let baseURL = '';
 
   ////////////////////////////////////////////////////////////
   // Package loading
@@ -29,17 +39,21 @@ globalThis.languagePluginLoader = (async () => {
   };
 
   let loadScript;
-  if (self.document) { // browser
+  if (globalThis.document) { // browser
     loadScript = (url) => new Promise((res, rej) => {
-      const script = self.document.createElement('script');
+      const script = globalThis.document.createElement('script');
       script.src = url;
       script.onload = res;
       script.onerror = rej;
-      self.document.head.appendChild(script);
+      globalThis.document.head.appendChild(script);
     });
-  } else if (self.importScripts) { // webworker
+  } else if (typeof require !== 'undefined'){
+    loadScript = async (path)=>{
+      return await eval('require')(path);
+    }
+  } else if (globalThis.importScripts) { // webworker
     loadScript = async (url) => {  // This is async only for consistency
-      self.importScripts(url);
+      globalThis.importScripts(url);
     }
   } else {
     throw new Error("Cannot determine runtime environment");
@@ -47,9 +61,9 @@ globalThis.languagePluginLoader = (async () => {
 
   function recursiveDependencies(names, _messageCallback, errorCallback,
                                  sharedLibsOnly) {
-    const packages = self.pyodide._module.packages.dependencies;
-    const loadedPackages = self.pyodide.loadedPackages;
-    const sharedLibraries = self.pyodide._module.packages.shared_library;
+    const packages = globalThis.pyodide._module.packages.dependencies;
+    const loadedPackages = globalThis.pyodide.loadedPackages;
+    const sharedLibraries = globalThis.pyodide._module.packages.shared_library;
     const toLoad = new Map();
 
     const addPackage = (pkg) => {
@@ -83,7 +97,7 @@ globalThis.languagePluginLoader = (async () => {
       }
     }
     if (sharedLibsOnly) {
-      onlySharedLibs = new Map();
+      var onlySharedLibs = new Map();
       for (let c of toLoad) {
         if (c[0] in sharedLibraries) {
           onlySharedLibs.set(c[0], toLoad.get(c[0]));
@@ -128,27 +142,15 @@ globalThis.languagePluginLoader = (async () => {
     // with other promises via Promise.race.
     let windowErrorHandler;
     let windowErrorPromise;
-    if (self.document) {
-      windowErrorPromise = new Promise((_res, rej) => {
-        windowErrorHandler = e => {
-          errorCallback(
-              "Unhandled error. We don't know what it is or whether it is related to 'loadPackage' but out of an abundance of caution we will assume that loading failed.");
-          errorCallback(e);
-          rej(e.message);
-        };
-        self.addEventListener('error', windowErrorHandler);
-      });
-    } else {
-      // This should be a promise that never resolves
-      windowErrorPromise = new Promise(() => {});
-    }
+    // This should be a promise that never resolves
+    windowErrorPromise = new Promise(() => {});
 
     // This is a collection of promises that resolve when the package's JS file
     // is loaded. The promises already handle error and never fail.
     let scriptPromises = [];
 
     for (let [pkg, uri] of toLoad) {
-      let loaded = self.pyodide.loadedPackages[pkg];
+      let loaded = globalThis.pyodide.loadedPackages[pkg];
       if (loaded !== undefined) {
         // If uri is from the DEFAULT_CHANNEL, we assume it was added as a
         // depedency, which was previously overridden.
@@ -199,13 +201,13 @@ globalThis.languagePluginLoader = (async () => {
     } finally {
       delete Module.monitorRunDependencies;
       if (windowErrorHandler) {
-        self.removeEventListener('error', windowErrorHandler);
+        globalThis.removeEventListener('error', windowErrorHandler);
       }
     }
 
     let packageList = [];
     for (let [pkg, uri] of toLoad) {
-      self.pyodide.loadedPackages[pkg] = uri;
+      globalThis.pyodide.loadedPackages[pkg] = uri;
       packageList.push(pkg);
     }
 
@@ -259,7 +261,7 @@ globalThis.languagePluginLoader = (async () => {
     }
     // get shared library packages and load those first
     // otherwise bad things happen with linking them in firefox.
-    sharedLibraryNames = [];
+    var sharedLibraryNames = [];
     try {
       sharedLibraryPackagesToLoad =
           recursiveDependencies(names, messageCallback, errorCallback, true);
@@ -292,7 +294,7 @@ globalThis.languagePluginLoader = (async () => {
             this["asyncWasmLoadPromise"] =
                 this["asyncWasmLoadPromise"].then(function() {
                   Module.loadDynamicLibrary(name,
-                                            {global : true, nodelete : true})
+                                            {global : true, nodelete : false})
                 });
           }
         } else {
@@ -376,15 +378,17 @@ globalThis.languagePluginLoader = (async () => {
 
   ////////////////////////////////////////////////////////////
   // Loading Pyodide
-  self.Module = Module;
+  globalThis.Module = Module;
 
   Module.noImageDecoding = true;
   Module.noAudioDecoding = true;
   Module.noWasmDecoding =
       false; // we preload wasm using the built in plugin now
   Module.preloadedWasm = {};
-  let isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
+  let isFirefox = false;
+  if (typeof navigator !== 'undefined'){
+    isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+  }
   Module.fatal_error = function(e) {
     for (let [key, value] of Object.entries(Module.public_api)) {
       if (key.startsWith("_")) {
@@ -655,14 +659,12 @@ globalThis.languagePluginLoader = (async () => {
 
   let moduleLoaded = new Promise(r => Module.postRun = r);
 
-  const scriptSrc = `${baseURL}pyodide.asm.js`;
-
-  await loadScript(scriptSrc);
+  let pyodide_builder = require('./pyodide.asm.js');
 
   // The emscripten module needs to be at this location for the core
-  // filesystem to install itself. Once that's complete, it will be replaced
+  // filesystem to install itglobalThis. Once that's complete, it will be replaced
   // by the call to `makePublicAPI` with a more limited public API.
-  self.pyodide = await pyodide(Module);
+  globalThis.pyodide = await pyodide_builder(Module);
 
   // There is some work to be done between the module being "ready" and postRun
   // being called.
@@ -689,13 +691,11 @@ def temp(Module):
   // TODO: Should we have this?
   Module.globals = Module.wrapNamespace(Module.globals);
 
-  delete self.Module;
-  let response = await fetch(`${baseURL}packages.json`);
-  Module.packages = await response.json();
+  delete globalThis.Module;
+  Module.packages = require('./packages.json');
 
-  fixRecursionLimit(self.pyodide);
-  self.pyodide = makePublicAPI(self.pyodide, PUBLIC_API);
-  self.pyodide.registerJsModule("js", globalThis);
-  self.pyodide.registerJsModule("pyodide_js", self.pyodide);
-})();
-languagePluginLoader
+  fixRecursionLimit(globalThis.pyodide);
+  globalThis.pyodide = makePublicAPI(globalThis.pyodide, PUBLIC_API);
+  globalThis.pyodide.registerJsModule("js", globalThis);
+  globalThis.pyodide.registerJsModule("pyodide_js", globalThis.pyodide);
+};

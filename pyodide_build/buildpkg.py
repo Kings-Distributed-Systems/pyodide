@@ -192,23 +192,22 @@ def package_files(buildpath: Path, srcpath: Path, pkg: Dict[str, Any], args):
             common.file_packager_path(),
             name + ".data",
             "--lz4",
-            "--preload",
+            "--embed",
             "{}@/".format(install_prefix),
             "--js-output={}".format(name + ".js"),
             "--export-name=pyodide._module",
             "--exclude",
             "*.wasm.pre",
             "--exclude",
-            "*__pycache__*",
-            "--use-preload-plugins",
+            "*__pycache__*"
         ],
         cwd=buildpath,
         check=True,
     )
-    subprocess.run(
-        ["uglifyjs", buildpath / (name + ".js"), "-o", buildpath / (name + ".js")],
-        check=True,
-    )
+    #subprocess.run(
+    #    ["uglifyjs", buildpath / (name + ".js"), "-o", buildpath / (name + ".js")],
+    #    check=True,
+    #)
 
     with open(buildpath / ".packaged", "wb") as fd:
         fd.write(b"\n")

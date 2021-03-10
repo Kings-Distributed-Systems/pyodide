@@ -78,10 +78,13 @@ class Package:
             raise
 
         if not self.library:
-            shutil.copyfile(
-                self.pkgdir / "build" / (self.name + ".data"),
-                outputdir / (self.name + ".data"),
-            )
+            try:
+              shutil.copyfile(
+                  self.pkgdir / "build" / (self.name + ".data"),
+                  outputdir / (self.name + ".data"),
+              )
+            except Exception as e:
+              print(e)
             shutil.copyfile(
                 self.pkgdir / "build" / (self.name + ".js"),
                 outputdir / (self.name + ".js"),
@@ -188,7 +191,7 @@ def build_from_graph(pkg_map: Dict[str, Package], outputdir: Path, args) -> None
             # Release the GIL so new packages get queued
             sleep(0.01)
 
-    for n in range(0, args.n_jobs):
+    for n in range(0, 3):
         Thread(target=builder, args=(n + 1,), daemon=True).start()
 
     num_built = 0

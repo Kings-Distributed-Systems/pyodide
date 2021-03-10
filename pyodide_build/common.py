@@ -18,6 +18,7 @@ DEFAULTLDFLAGS = " ".join(
         "-s",'BINARYEN_EXTRA_PASSES="--pass-arg=max-func-params@61"',
         "-s", "SIDE_MODULE=1",
         "-s", "WASM=1",
+        "-s", "SINGLE_FILE=1",
         "--memory-init-file", "0",
         "-s", "LINKABLE=1",
         "-s", "EXPORT_ALL=1",
@@ -43,11 +44,11 @@ def _parse_package_subset(query: Optional[str]) -> Optional[Set[str]]:
 
 
 def file_packager_path() -> Path:
-    # Use emcc.py because emcc may be a ccache symlink
+    # Use emcc.py because emcc may be a ccache symlink 
     emcc_path = shutil.which("emcc.py")
     if emcc_path is None:
         raise RuntimeError(
             "emcc.py not found. Setting file_packager.py path to /dev/null"
         )
 
-    return Path(emcc_path).parent / "tools" / "file_packager.py"
+    return Path(__file__).parents[1] / "tools" / "file_packager.py"

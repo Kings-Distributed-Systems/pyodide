@@ -61,6 +61,8 @@ import shutil
 import random
 import uuid
 import ctypes
+import zlib 
+import base64
 
 real_file_loc = os.path.dirname( os.path.abspath( __file__ )) + '/../emsdk/emsdk/upstream/emscripten/tools/file_packager.py'
 
@@ -270,15 +272,56 @@ def main():
           file=sys.stderr)
     return 1
 
-  ret = ''
+  ret = '''
+
+  var globalObj = typeof self!=='undefined'? self :  ( typeof window !== 'undefined'? window : (typeof global !=='undefined'? global: globalThis ));
+
+  
+  function atob(string){
+    var b64 ="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    string = String(string).replace(/[\\t\\n\\f\\r ]+/g, "");
+    // Adding the padding if missing, for semplicity
+    string += "==".slice(2 - (string.length & 3));
+    var bitmap, result = "", r1, r2, i = 0;
+    for (; i < string.length;) {
+        bitmap = b64.indexOf(string.charAt(i++)) << 18 | b64.indexOf(string.charAt(i++)) << 12
+          | (r1 = b64.indexOf(string.charAt(i++))) << 6 | (r2 = b64.indexOf(string.charAt(i++)));
+          result += r1 === 64 ? String.fromCharCode(bitmap >> 16 & 255)
+            : r2 === 64 ? String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255)
+                : String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255, bitmap & 255);
+      }
+      return result;
+  };
+
+  function _base64ToUint8(base64){
+      var binary_string = atob(base64);
+      var binArray = new Uint8Array(binary_string.length);
+      for (let i = 0; i< binary_string.length; i++){
+          binArray[i] = binary_string.charCodeAt(i);
+      }
+      return binArray;
+  };
+
+
+
+
+'''
   # emcc will add this to the output itself, so it is only needed for
   # standalone calls
   if not from_emcc:
     ret = '''
   var Module = typeof %(EXPORT_NAME)s !== 'undefined' ? %(EXPORT_NAME)s : {};
+
   ''' % {"EXPORT_NAME": export_name}
 
   ret += '''
+
+  var pako = Module.pako;
+  if (typeof pako === 'undefined'){
+      pako = require('pako');
+      Module.pako = pako;
+  }
+
   if (!Module.expectedDataFileDownloads) {
     Module.expectedDataFileDownloads = 0;
   }
@@ -463,19 +506,28 @@ def main():
     filename = file_['dstpath']
     dirname = os.path.dirname(filename)
     basename = os.path.basename(filename)
-    if file_['mode'] == 'embed':
+    if True:#file_['mode'] == 'embed':
       # Embed
-      data = list(bytearray(open(file_['srcpath'], 'rb').read()))
-      code += '''var fileData%d = [];\n''' % counter
+      data = open(file_['srcpath'], 'rb').read()
+      data = zlib.compress(data);
+      code += '''var fileData%d = new Uint8Array(%d);\n''' % (counter, len(data))
       if data:
         parts = []
         chunk_size = 10240
         start = 0
         while start < len(data):
-          parts.append('''fileData%d.push.apply(fileData%d, %s);\n'''
-                       % (counter, counter, str(data[start:start + chunk_size])))
+          data_c = data[start:start+chunk_size]
+          data_c = base64.b64encode(data_c)
+          data_c = data_c.decode('ascii')
+          parts.append(
+'''
+fileData%d.set( _base64ToUint8(`%s`), %d);\n
+''' % (counter, str(data_c), start)
+          )
           start += chunk_size
         code += ''.join(parts)
+      
+      code += ('''fileData%d = pako.inflate( fileData%d ) ;\n''' % (counter, counter))
       code += ('''Module['FS_createDataFile']('%s', '%s', fileData%d, true, true, false);\n'''
                % (dirname, basename, counter))
       counter += 1
